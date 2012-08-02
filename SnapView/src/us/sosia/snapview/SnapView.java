@@ -2,6 +2,7 @@ package us.sosia.snapview;
 
 import android.content.Context;
 import android.graphics.RectF;
+import android.provider.ContactsContract.CommonDataKinds.Event;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.GestureDetector.OnGestureListener;
@@ -20,10 +21,11 @@ public class SnapView extends FrameLayout {
 	private RectF mLeftBoundRect;
 	private RectF mRightBoundRect;
 	
+	private Distnation pDistnation = Distnation.TOP;
 	private boolean pIsLeftViewEnable = false;
 	private boolean pIsRightViewEnable = false;
 	private boolean pDispatchToTop = true;  
-	
+	private boolean pLockDispatch = true;
  	
 	private enum Position{
 		LEFT,CENTER,RIGHT
@@ -41,7 +43,9 @@ public class SnapView extends FrameLayout {
 		STEP,SIDE,BLINK
 	}
 	
-	
+	private enum Distnation{
+		TOP,LEFT,RIGHT,OUTTER
+	}
 	
 	
 	public void setLeftView(View leftView) {
@@ -95,8 +99,8 @@ public class SnapView extends FrameLayout {
 		mGestureDetector = new GestureDetector(getContext(),  new GestureListener());
 	}
 	
-	private boolean isPointInRect(float x,float y){
-		switch (mTopView.getPosition()) {
+	private boolean isPointInRect(float x,float y,Position currentPosition){
+		switch (currentPosition) {
 		case CENTER:
 			return false;
  		case LEFT:
@@ -113,41 +117,37 @@ public class SnapView extends FrameLayout {
 	public boolean dispatchTouchEvent(MotionEvent ev) {
 		//bound,scroll DIrection
 		mGestureDetector.onTouchEvent(ev);
- 		return true;
-	}
-
-	private void lockDispatchDirection(){
 		
+		if (pLockDispatch) {
+			switch (pDistnation) {
+				case TOP:
+					return mTopView.dispatchTouchEvent(ev);
+	 			case LEFT:
+	 				return mLeftView.dispatchTouchEvent(ev);
+	 			case RIGHT:
+	 				return mRightView.dispatchTouchEvent(ev);
+	 			default:
+					break;
+			}
+		}
+ 		return false;
 	}
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	private void resetState() {
+		pLockDispatch = false;
+		pDispatchToTop = true;
+	}
 
 	private class GestureListener implements OnGestureListener{
 
 		@Override
 		public boolean onDown(MotionEvent e) {
- 			return false;
+			resetState();
+ 			return true;
 		}
 
 		@Override
@@ -157,21 +157,82 @@ public class SnapView extends FrameLayout {
 
 		@Override
 		public boolean onSingleTapUp(MotionEvent e) {
- 			return false;
+		//	resetState();
+			Position currentPosition = mTopView.getPosition();
+			switch (currentPosition) {
+				case LEFT:
+					if (isPointInRect(e.getX(), e.getY(), Position.LEFT)) {
+						mTopView.snapToCenter();
+						return true;
+					}else {
+						//stup
+						//to right
+						return mRightView.dispatchTouchEvent(e);
+					}
+ 				case RIGHT:
+					if (isPointInRect(e.getX(), e.getY(), Position.RIGHT)) {
+						mTopView.snapToCenter();
+						return true;
+					}else {
+						//stup
+						//to left
+						return mLeftView.dispatchTouchEvent(e);                      
+					}
+ 	
+				default:
+					break;
+			}
+			
+			return false;
 		}
 
+
+		
+		
+		
 		@Override
 		public boolean onScroll(MotionEvent e1, MotionEvent e2,
 				float distanceX, float distanceY) {
 			//sroll <--------->
-			if (Math.abs(distanceX) > Math.abs(distanceY)) {
-				mTopView.scroll((int)distanceX, 25);
-				lockDispatchDirection();
-			}else {
-				//scroll  ^
+			if (!pLockDispatch) {
+				//lock the dispatch direction in the first scroll event
+				pLockDispatch = true;
 				
-				
+				if (Math.abs(distanceX) > Math.abs(distanceY)) {
+					mTopView.scroll((int)distanceX, 25);
+					pDispatchToTop = true;
+					pDistnation = Distnation.OUTTER;
+				}else {
+					//scroll  ^	
+ 					Position tempPosition = mTopView.getPosition();
+ 					switch (tempPosition) {
+					case CENTER:
+	 					pDispatchToTop = true;
+						pDistnation = Distnation.TOP;
+						break;
+					case LEFT:
+						if (isPointInRect(e2.getX(), e2.getY(), tempPosition)) {
+							pDistnation = Distnation.RIGHT;
+		 					pDispatchToTop = false;
+						}
+						break;
+					case RIGHT:
+						if (isPointInRect(e2.getX(), e2.getY(), tempPosition)) {
+							pDistnation = Distnation.LEFT;
+		 					pDispatchToTop = false;
+						}
+						break;
+					default:
+						break;
+					}
+ 					
+ 					
+				}
 			}
+			if (pDispatchToTop && pDistnation == Distnation.OUTTER) {
+				mTopView.scroll((int)distanceX, 25);
+			}
+
  			return true;
 		}
 
@@ -183,16 +244,54 @@ public class SnapView extends FrameLayout {
 		@Override
 		public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
 				float velocityY) {
+			resetState();
 			if (velocityX > 0) {
-				mTopView.snapToRight();
+				snapToNext(Direction.LEFT);
 			}else {
-				mTopView.snapToCenter();
+				snapToNext(Direction.RIGHT);
 			}
  			return true;
 		}
 		
 	}
 
+	private void snapToNext(Direction snapDirection){
+		Position currentPosition = mTopView.getPosition();
+		switch (snapDirection) {
+		case LEFT:
+		{
+			switch (currentPosition) {
+			case RIGHT:
+				mTopView.snapToCenter();
+				break;
+			case CENTER:
+				mTopView.snapToLeft();
+				break;
+			default:
+				break;
+			}
+		}
+			break;
+		case RIGHT:
+		{
+			switch (currentPosition) {
+			case LEFT:
+				mTopView.snapToCenter();
+				break;
+			case CENTER:
+				mTopView.snapToRight();
+				break;
+			default:
+				break;
+			}
+		}
+			break;
+		case IDLE:
+			break;
+		default:
+			break;
+		}
+	}
 
 
 
@@ -248,6 +347,8 @@ public class SnapView extends FrameLayout {
  			pCenterPosition = w/2;
  			pScrollToLeft = - (w - w / pLeftBound);
  			pScrollToRight = w - w / pRightBound;
+ 			mRightBoundRect = new RectF(pScrollToRight, 0, w, h);
+ 			mLeftBoundRect = new RectF(0, 0, w/pLeftBound, h);
 		}
 		
 
