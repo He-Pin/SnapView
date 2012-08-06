@@ -48,7 +48,10 @@ public class SnapView extends FrameLayout {
 		TOP,LEFT,RIGHT,OUTTER
 	}
 	
-	
+	/**
+	 * set the left view of the snap view ,when the left view is set, you can snap your top view to right and center.
+	 * @param leftView The left side view to display
+	 * **/
 	public void setLeftView(View leftView) {
  
 		
@@ -58,7 +61,10 @@ public class SnapView extends FrameLayout {
 		mLeftView.addView(leftView);
 		pIsLeftViewEnable = true;
 	}
-
+	/**
+	 * set the right view of the snap view ,when the right view is set, you can snap your top view to left and center.
+	 * @param rightView The right side view to display
+	 * **/
 	public void setRightView(View rightView) {
  
 		if (mRightView.getChildCount() != 0) {
@@ -68,11 +74,25 @@ public class SnapView extends FrameLayout {
 		pIsRightViewEnable = true;
 	}
 	
+	/**
+	 * set the top view of the snap view.the top view must be set,and the top view is which view you can snap to left
+	 * and right.the enabled snap direction is depends on whether the left_view or right_view is set.
+	 * @param topView The top view of the snap view.
+	 * */
 	public void setTopView(View topView) {
 		if (mTopView.getChildCount() != 0) {
 			mTopView.removeAllViews();
 		}
 		mTopView.addView(topView);
+	}
+	
+
+	public void setLeftViewBackGroundCorlor(int corlor){
+		mLeftView.setBackgroundColor(corlor);
+	}
+	
+	public void setRightViewBackGroundCorlor(int corlor){
+		mRightView.setBackgroundColor(corlor);
 	}
 	
 	public RectF getmLeftBoundRect() {
@@ -107,11 +127,19 @@ public class SnapView extends FrameLayout {
 		addView(mRightView);
 		addView(mTopView);
 	}
-	
+	/**
+	 * Set the interpolator that snapping animation use
+	 * @param interpolator The interpolator used by the top view to snap left and right 
+	 * **/
 	public void SetInterpolator(Interpolator interpolator){
  		mTopView.setInterpolator(interpolator);
 	}
 	
+	
+	/**
+	 * How quick should the snapping should be
+	 * @param duration The duration to snap left and right
+	 * **/
 	public void setDuration(int duration){
 		mTopView.setScrollDuration(duration);
 	}
@@ -357,7 +385,12 @@ public class SnapView extends FrameLayout {
 
 
 
-
+/***
+ * Top view is a view witch can snap left or right in the snap view group.to use it ,just add your view as an child to
+ * it,ever more,you can add your own view group to it too!
+ * Top view is always been used with the snap view,and you just interactive with it with the setTopView function.
+ * 
+ * ***/
 	public class TopView extends FrameLayout{
 		private int pLeftBound = 10;
 		private int pRightBound = 10;
@@ -442,6 +475,9 @@ public class SnapView extends FrameLayout {
 			}
  		}
 
+		/**
+		 * Reset the top view to the corresponding position
+		 * */
 		public void reset(){
 			if (isNeedReset()) {
 				resetTo(resetToWhere());
@@ -681,10 +717,22 @@ public class SnapView extends FrameLayout {
 
 		
 	}
-
+	/**
+	 * This listener's function is fired once the snap view's top view is 
+	 * snap to left,right or center.
+	 * ***/
 	public static abstract interface TopViewListener{
+		/**
+		 * Called when the top view is snap to left.
+		 * */
 		public void snapToLeft();
+		/**
+		 * Called when the top view is snap to right.
+		 * */
 		public void snapToRight();
+		/**
+		 * Called when the top view is snap to center.
+		 * */
 		public void snapToCenter();
 	}
 	
